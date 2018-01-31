@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.autograd import Variable
+from layers import Standout
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
@@ -23,7 +24,7 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='disables CUDA training')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
-parser.add_argument('--log-interval', type=int, default=10, metavar='N',
+parser.add_argument('--log-interval', type=int, default=10000, metavar='N',
                     help='how many batches to wait before logging training status')
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
@@ -31,7 +32,6 @@ args.cuda = not args.no_cuda and torch.cuda.is_available()
 torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
-
 
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 train_loader = torch.utils.data.DataLoader(
@@ -50,11 +50,20 @@ test_loader = torch.utils.data.DataLoader(
 
 
 class Net(nn.Module):
-    def __init__(self):
+    def __init__(self, standout):
         super(Net, self).__init__()
+        #### SELF ARGS ####
+        self.standout = standout
+
+        #### MODEL PARAMS ####
         self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
         self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
-        self.conv2_drop = nn.Dropout2d()
+
+        if standout:
+            self.conv2_drop = Standout(self.conv1, 1, 1)
+        else:
+            self.conv2_drop = nn.Dropout2d()
+
         self.fc1 = nn.Linear(320, 50)
         self.fc2 = nn.Linear(50, 10)
 
@@ -67,13 +76,9 @@ class Net(nn.Module):
         x = self.fc2(x)
         return F.log_softmax(x)
 
-model = Net()
-if args.cuda:
-    model.cuda()
 
-optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
-
-def train(epoch):
+def train(model, epoch):
+    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         if args.cuda:
@@ -89,7 +94,8 @@ def train(epoch):
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader), loss.data[0]))
 
-def test():
+def test(model):
+    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
     model.eval()
     test_loss = 0
     correct = 0
@@ -103,11 +109,27 @@ def test():
         correct += pred.eq(target.data.view_as(pred)).cpu().sum()
 
     test_loss /= len(test_loader.dataset)
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.5f}%)\n'.format(
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
 
 
-for epoch in range(1, args.epochs + 1):
-    train(epoch)
-    test()
+def run(standout=False):
+
+    model = Net(standout)
+    if args.cuda:
+        model.cuda()
+
+    for epoch in range(1, args.epochs + 1):
+        train(model, epoch)
+        test(model)
+
+def main():
+    print("RUNNING STANDOUT ONE")
+    run(standout=True)
+
+    print("RUNNING DROPOUT ONE")
+    run()
+
+if __name__ == "__main__":
+    main()
