@@ -34,8 +34,8 @@ def sample_mask(p):
     mask = uniform < p
 
     if torch.cuda.is_available():
-        mask.type(torch.cuda.FloatTensor)
+        mask = mask.type(torch.cuda.FloatTensor)
     else:
-        mask.type(torch.FloatTensor)
+        mask = mask.type(torch.FloatTensor)
 
     return mask
