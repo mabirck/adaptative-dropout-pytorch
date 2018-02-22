@@ -1,6 +1,8 @@
 # adaptative-dropout-pytorch
 Pytorch implementation of Adaptive Dropout a.k.a Standout.
 
+* Unfortunately I wasn't able to achieve the results reported in the paper, Regular dropout always get aproximately 98.70, while the standout version I was able to achieve only 98.51 after tweaking a lot the knoobs, i didn't make grid search was all empirical and cloning the paper parameters! Hope someone can achieve the reporteded results from this code.
+
 # References:
 
   -Papers:
